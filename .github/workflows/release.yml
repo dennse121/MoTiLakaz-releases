@@ -1,0 +1,23 @@
+# When a new APK is pushed to apk/, publish it as a GitHub release (tag v<version>).
+name: Publish release
+on:
+  push:
+    branches: [main]
+    paths: ["apk/*.apk"]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create release for the newest APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          f=$(ls apk/MoTiLakaz-*.apk | sort -V | tail -1)
+          v=$(basename "$f" .apk | sed 's/MoTiLakaz-//')
+          if gh release view "v$v" >/dev/null 2>&1; then echo "v$v already published"; exit 0; fi
+          notes="notes/$v.md"; [ -f "$notes" ] || { echo "New version $v" > /tmp/n.md; notes=/tmp/n.md; }
+          gh release create "v$v" "$f" --title "Mo ti lakaz $v" --notes-file "$notes" --latest
